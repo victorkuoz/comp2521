@@ -18,8 +18,8 @@ int min(int a, int b) {
 
 struct wall {
     // TODO
-    int height, width;
-    struct rock *grid[25][25];
+    int height, width, num;
+    struct rock *rocks;
 };
 
 static int compareRocks(const void *ptr1, const void *ptr2);
@@ -29,19 +29,12 @@ static int compareRocks(const void *ptr1, const void *ptr2);
  */
 Wall WallNew(int height, int width) {
     // TODO
-    Wall wall;
-    printf("test\n");
+    Wall wall = calloc(1, sizeof(struct wall));
     wall->height = height;
     wall->width = width;
+    wall->num = 0;
+    wall->rocks = calloc(height*width, sizeof(struct rock));
 
-    // wall->grid = (struct rock ***) calloc(height, sizeof(struct rock**));
-    // for (int i = 0; i < height; i++) {
-    //     printf("test\n");
-        
-    //     wall->grid[i] = (struct rock **) calloc(width, sizeof(struct rock*));
-    // }
-
-    printf("test\n");
     return wall;
 }
 
@@ -50,9 +43,7 @@ Wall WallNew(int height, int width) {
  */
 void WallFree(Wall w) {
     // TODO
-    // for (int i = 0; i < w->height; i++)
-    //     free(w->grid[i]);
-    // free(w->grid);
+    free(w->rocks);
     free(w);
 }
 
@@ -77,7 +68,7 @@ int WallWidth(Wall w) {
  * If there is already a rock at the given coordinates, replaces it
  */
 void WallAddRock(Wall w, struct rock rock) {
-    w->grid[rock.row][rock.col] = &rock;
+    w->rocks[w->num++] = rock;
     // TODO
 }
 
@@ -86,14 +77,7 @@ void WallAddRock(Wall w, struct rock rock) {
  */
 int WallNumRocks(Wall w) {
     // TODO
-    int count = 0;
-    for (int i = 0; i < w->height; i++) {
-        for (int j = 0; j < w->width; j++) {
-            if (w->grid[i][j] != NULL)
-                count++;
-        }
-    }
-    return count;
+    return w->num;
 }
 
 /**
@@ -103,15 +87,10 @@ int WallNumRocks(Wall w) {
  */
 int WallGetAllRocks(Wall w, struct rock rocks[]) {
     // TODO
-    int count = 0;
-    for (int i = 0; i < w->height; i++) {
-        for (int j = 0; j < w->width; j++) {
-            if (w->grid[i][j] != NULL) {
-                rocks[count++] = *w->grid[i][j];
-            }
-        }
+    for (int i = 0; i < w->num; i++) {
+       rocks[i] = w->rocks[i]; 
     }
-    return count;
+    return w->num;
 }
 
 /**
@@ -125,15 +104,14 @@ int WallGetRocksInRange(Wall w, int row, int col, int dist,
 {
     // TODO
     int count = 0, squre = dist*dist;
-    for (int i = max(0, row - dist), n = min(w->height - 1, row + dist); i <= n; i++) {
-        for (int j = max(0, col - dist), m = min(w->width - 1, col + dist); j <= m; j++) {
-            if (w->grid[i][j] != NULL) {
-                if (abs(i - row)*abs(i - row) + abs(j - col)*abs(j - col) <= squre) {
-                    rocks[count++] = *w->grid[i][j];
-                }
-            }
+
+    for (int i = 0; i < w->num; i++) {
+        int dr = abs(w->rocks[i].row - row), dc = abs(w->rocks[i].col - col);
+        if (dr*dr + dc*dc <= squre) {
+            rocks[count++] = w->rocks[i];
         }
     }
+
     return count;
 }
 
@@ -148,15 +126,17 @@ int WallGetColouredRocksInRange(Wall w, int row, int col, int dist,
 {
     // TODO
     int count = 0, squre = dist*dist;
-    for (int i = max(0, row - dist), n = min(w->height - 1, row + dist); i <= n; i++) {
-        for (int j = max(0, col - dist), m = min(w->width - 1, col + dist); j <= m; j++) {
-            if (w->grid[i][j] != NULL && w->grid[i][j]->colour == colour) {
-                if (abs(i - row)*abs(i - row) + abs(j - col)*abs(j - col) <= squre) {
-                    rocks[count++] = *w->grid[i][j];
-                }
-            }
+
+    for (int i = 0; i < w->num; i++) {
+        if (w->rocks[i].colour != colour)
+            continue;
+
+        int dr = abs(w->rocks[i].row - row), dc = abs(w->rocks[i].col - col);
+        if (dr*dr + dc*dc <= squre) {
+            rocks[count++] = w->rocks[i];
         }
     }
+
     return count;
 }
 
