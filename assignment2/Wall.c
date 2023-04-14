@@ -9,17 +9,18 @@
 #include "Wall.h"
 
 int max(int a, int b) {
-    return (a > b) ? a : b;
+    return a > b ? a : b;
 }
 
 int min(int a, int b) {
-    return (a < b) ? a : b;
+    return a < b ? a : b;
 }
 
 struct wall {
     // TODO
-    int height, width, num;
-    struct rock *rocks;
+    int height, width, count, size;
+    struct rock ***grid;
+    struct rock **rocks;
 };
 
 static int compareRocks(const void *ptr1, const void *ptr2);
@@ -30,10 +31,18 @@ static int compareRocks(const void *ptr1, const void *ptr2);
 Wall WallNew(int height, int width) {
     // TODO
     Wall wall = calloc(1, sizeof(struct wall));
+
     wall->height = height;
     wall->width = width;
-    wall->num = 0;
-    wall->rocks = calloc(height*width, sizeof(struct rock));
+    wall->count = 0;
+    wall->size = 1;
+
+    wall->grid = calloc(height, sizeof(struct rock**));
+    for (int i = 0; i < height; i++) {
+        wall->grid[i] = calloc(width, sizeof(struct rock*));
+    }
+
+    wall->rocks = calloc(wall->size, sizeof(struct rock*));
 
     return wall;
 }
@@ -43,6 +52,13 @@ Wall WallNew(int height, int width) {
  */
 void WallFree(Wall w) {
     // TODO
+    for (int i = 0; i < w->height; i++) {
+        for (int j = 0; j < w->width; j++) {
+            free(w->grid[i][j]);
+        }
+        free(w->grid[i]);
+    }
+    free(w->grid);
     free(w->rocks);
     free(w);
 }
@@ -68,7 +84,26 @@ int WallWidth(Wall w) {
  * If there is already a rock at the given coordinates, replaces it
  */
 void WallAddRock(Wall w, struct rock rock) {
-    w->rocks[w->num++] = rock;
+    if (!w->grid[rock.row][rock.col]) {
+        w->grid[rock.row][rock.col] = calloc(1, sizeof(struct rock));
+
+        if (w->count == w->size) {
+            w->size *= 2;
+            struct rock **tmp = calloc(w->size, sizeof(struct rock*));
+            for (int i = 0; i < w->count; i++) {
+                tmp[i] = w->rocks[i];
+            }
+
+            free(w->rocks);
+            w->rocks = tmp;
+        }
+
+        w->rocks[w->count++] = w->grid[rock.row][rock.col];
+    }
+
+    w->grid[rock.row][rock.col]->row = rock.row;
+    w->grid[rock.row][rock.col]->col = rock.col;
+    w->grid[rock.row][rock.col]->colour = rock.colour;
     // TODO
 }
 
@@ -77,7 +112,7 @@ void WallAddRock(Wall w, struct rock rock) {
  */
 int WallNumRocks(Wall w) {
     // TODO
-    return w->num;
+    return w->count;
 }
 
 /**
@@ -87,10 +122,10 @@ int WallNumRocks(Wall w) {
  */
 int WallGetAllRocks(Wall w, struct rock rocks[]) {
     // TODO
-    for (int i = 0; i < w->num; i++) {
-       rocks[i] = w->rocks[i]; 
+    for (int i = 0; i < w->count; i++) {
+       rocks[i] = *(w->rocks[i]);
     }
-    return w->num;
+    return w->count;
 }
 
 /**
@@ -103,16 +138,16 @@ int WallGetRocksInRange(Wall w, int row, int col, int dist,
                         struct rock rocks[])
 {
     // TODO
-    int count = 0, squre = dist*dist;
+    int cnt = 0, squ = dist*dist;
 
-    for (int i = 0; i < w->num; i++) {
-        int dr = abs(w->rocks[i].row - row), dc = abs(w->rocks[i].col - col);
-        if (dr*dr + dc*dc <= squre) {
-            rocks[count++] = w->rocks[i];
+    for (int i = 0; i < w->count; i++) {
+        int dr = abs(w->rocks[i]->row - row), dc = abs(w->rocks[i]->col - col);
+        if (dr*dr + dc*dc <= squ) {
+            rocks[cnt++] = *(w->rocks[i]);
         }
     }
 
-    return count;
+    return cnt;
 }
 
 /**
@@ -125,19 +160,20 @@ int WallGetColouredRocksInRange(Wall w, int row, int col, int dist,
                                 Colour colour, struct rock rocks[])
 {
     // TODO
-    int count = 0, squre = dist*dist;
+    int cnt = 0, squ = dist*dist;
 
-    for (int i = 0; i < w->num; i++) {
-        if (w->rocks[i].colour != colour)
+    for (int i = 0; i < w->count; i++) {
+        if (w->rocks[i]->colour != colour) {
             continue;
+        }
 
-        int dr = abs(w->rocks[i].row - row), dc = abs(w->rocks[i].col - col);
-        if (dr*dr + dc*dc <= squre) {
-            rocks[count++] = w->rocks[i];
+        int dr = abs(w->rocks[i]->row - row), dc = abs(w->rocks[i]->col - col);
+        if (dr*dr + dc*dc <= squ) {
+            rocks[cnt++] = *(w->rocks[i]);
         }
     }
 
-    return count;
+    return cnt;
 }
 
 ////////////////////////////////////////////////////////////////////////
