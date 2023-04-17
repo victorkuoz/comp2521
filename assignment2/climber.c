@@ -99,6 +99,7 @@ struct path findMinEnergyPath(Wall w, int reach, int energyCosts[NUM_COLOURS]) {
 
     int height = WallHeight(w);
     int width = WallWidth(w);
+    int squ = reach * reach;
 
     Rock *rocks = calloc(height * width, sizeof(Rock));
     int numOfRocks = WallGetAllRocks(w, rocks);
@@ -130,6 +131,7 @@ struct path findMinEnergyPath(Wall w, int reach, int energyCosts[NUM_COLOURS]) {
                 pq[curIdx] = node;
                 curIdx >>= 1;
             }
+            explored[rocks[i].row][rocks[i].col] = true;
         }
     }
 
@@ -164,24 +166,65 @@ struct path findMinEnergyPath(Wall w, int reach, int energyCosts[NUM_COLOURS]) {
                 break;
             }
 
-            if (pq[leftIdx].energy < pq[curIdx].energy && pq[leftIdx].energy <= pq[rightIdx].energy) {
+            if (pq[curIdx].energy <= pq[leftIdx].energy && pq[curIdx].energy <= pq[rightIdx].energy)
+                break;
+
+            if (pq[leftIdx].energy <= pq[rightIdx].energy) {
                 EnergyNode node = pq[curIdx];
                 pq[curIdx] = pq[leftIdx];
                 pq[leftIdx] = node;
                 curIdx = leftIdx;
-            } else if (pq[rightIdx].energy < pq[curIdx].energy && pq[rightIdx].energy <= pq[leftIdx].energy) {
+            } else {
                 EnergyNode node = pq[curIdx];
                 pq[curIdx] = pq[rightIdx];
                 pq[rightIdx] = node;
                 curIdx = rightIdx;
-            } else {
-                break;
             }
         }
 
         // printf("%d %d %d %d\n", top.energy, top.rock->row, top.rock->col, top.rock->colour);
 
-        // todo
+        Rock *cur = top.rock;
+        if (height <= cur->row + reach) {
+            Rock **revPath = calloc(height * width, sizeof(Rock));
+            while (cur) {
+                revPath[p.numRocks++] = cur;
+                cur = prevRock[cur->row][cur->col];
+            }
+
+            p.rocks = calloc(p.numRocks, sizeof(Rock));
+            for (int i = 0, j = p.numRocks - 1; i < p.numRocks; i++, j--)
+                p.rocks[i] = *revPath[j];
+            free(revPath);
+            break;
+        }
+
+        for (int i = 0; i < numOfRocks; i++) {
+            int r = rocks[i].row, c = rocks[i].col, colour = rocks[i].colour;
+            if (explored[r][c])
+                continue;
+
+            int dr = abs(r - cur->row), dc = abs(c - cur->col);
+
+            if (squ < dr*dr + dc*dc)
+                continue;
+
+            int pqIdx = pqInsertIdx++;
+            pq[pqIdx] = (EnergyNode) {.energy = top.energy + energyCosts[colour], .rock = &rocks[i]};
+            
+            while (1 < pqIdx) {
+                if (pq[pqIdx >> 1].energy <= pq[pqIdx].energy)
+                    break;
+
+                EnergyNode node = pq[pqIdx >> 1];
+                pq[pqIdx >> 1] = pq[pqIdx];
+                pq[pqIdx] = node;
+                pqIdx >>= 1;
+            }
+
+            explored[r][c] = true;
+            prevRock[r][c] = cur;
+        }
     }
 
     free(rocks);
@@ -206,12 +249,3 @@ struct path findMinTurnsPath(Wall w, int reach, int energyCosts[NUM_COLOURS],
     struct path p = {0, NULL};
     return p;
 }
-
-// task1 
-// multiple start point (exploired) vs single start point (no explore)
-
-// task2
-// task1 vs task2 (no while pop) vs minimum spanning (while pop)
-
-// task2
-// pq (implement by min-heap)
