@@ -166,7 +166,7 @@ static void testFindMinTurnsPath(FILE *fp) {
             struct rock r = path.rocks[i];
             printf("-> ");
             if (i > 0 && r.row == path.rocks[i - 1].row &&
-                    r.col && path.rocks[i - 1].col) {
+                    r.col == path.rocks[i - 1].col) {
                 printf("Rest");
                 energyLeft = t.maxEnergy;
             } else {
@@ -252,4 +252,3 @@ static char *colourToStr(Colour c) {
 }
 
 ////////////////////////////////////////////////////////////////////////
-
